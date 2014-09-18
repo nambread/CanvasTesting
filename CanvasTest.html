@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+	<head>
+
+		<script type="text/javascript" src="jquery-1.11.1.js"></script>
+		<script type="text/javascript" src="CanvasTest.js"></script>		
+		<title>Canvas Testing</title>
+		<script type="text/javascript">
+			$(document).ready(function (){
+				initCanvasTest();
+			});
+		</script>
+		<script type="text/javascript">
+			document.onkeypress = function(e)
+			{
+				HandleKeyPress(e);
+			}
+		</script>
+	</head>
+	<body>
+		<h1>LolCanvasTest</h1>
+		<div>
+			<button id="GetScreenshot" onclick="GetScreenshot()">GetScreenshot</button>
+			<button id="Undo" onclick="Undo()">Undo</button>
+			<button id="CircleBtn" onclick="ChangeDrawType(this.id)">Circle</button>
+			<button id="RectBtn" onclick="ChangeDrawType(this.id)">Rectangle</button>
+			<button id="TextBtn" onclick="ChangeDrawType(this.id)">Text</button>
+		</div>
+		<div>
+			<input id="colourPicker" value="#FFFFFF" style="width:70px" onchange="ChangeColour(this.value)">
+		</input>
+		</div>
+		<canvas id="mCanvas" width="800" height ="800"></canvas>
+	</body>
+</html>
