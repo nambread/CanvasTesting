@@ -18,18 +18,16 @@ cCircle = function(pos, radius, brushWidth, colour) {
 	this.brushWidth = brushWidth;
 	this.colour = colour;
 }
-cCircle.prototype ={
-	//Draw
-	Draw: function(canvasContext) {
-		canvasContext.beginPath();
-		canvasContext.arc(	this.position.x, this.position.y,
-							this.radius, 0, 2 * Math.PI,
-							false);
-		canvasContext.lineWidth = this.brushWidth;
-		canvasContext.strokeStyle = this.colour;
-		canvasContext.stroke();
-		canvasContext.closePath();
-	}
+
+cCircle.prototype.Draw = function(canvasContext) {
+	canvasContext.beginPath();
+	canvasContext.arc(	this.position.x, this.position.y,
+						this.radius, 0, 2 * Math.PI,
+						false);
+	canvasContext.lineWidth = this.brushWidth;
+	canvasContext.strokeStyle = this.colour;
+	canvasContext.stroke();
+	canvasContext.closePath();
 }
 
 //Box Class
@@ -40,18 +38,15 @@ cBox = function(pos, height, width, brushWidth, colour) {
 	this.brushWidth = brushWidth;
 	this.colour = colour;
 }
-cBox.prototype = {
-	//Draw
-	Draw: function(canvasContext) {
-		canvasContext.beginPath();
-		canvasContext.rect(	this.position.x, this.position.y,
-							this.width, this.height);
-		canvasContext.lineWidth = this.brushWidth;
-		canvasContext.strokeStyle = this.colour;
-		canvasContext.stroke();
-		canvasContext.closePath();
-	}
-}
+cBox.prototype.Draw = function(canvasContext) {
+	canvasContext.beginPath();
+	canvasContext.rect(	this.position.x, this.position.y,
+						this.width, this.height);
+	canvasContext.lineWidth = this.brushWidth;
+	canvasContext.strokeStyle = this.colour;
+	canvasContext.stroke();
+	canvasContext.closePath();
+}	
 
 //Text Class
 cText = function(pos, height, width, size, text, colour) {
@@ -61,14 +56,52 @@ cText = function(pos, height, width, size, text, colour) {
 	this.fontSize = size;
 	this.text = text;
 	this.colour = colour;
+	this.lines = [''];
 }
-cText.prototype ={
-	//Draw
-	Draw: function(canvasContext) {
-		var letters = this.text.substr('');
-		console.log(letters);
-		canvasContext.font = "" + fontSize + "pt " + g_FontStyle;
-		canvasContext.fillText(this.text, this.position.x, this.position.y + this.fontSize);
+
+cText.prototype.Draw = function(canvasContext) {
+	canvasContext.font = "" + fontSize + "pt " + g_FontStyle;
+	var x = this.position.x;
+	var y = this.position.y + this.fontSize;
+	for (i = 0 ; i < this.lines.length ; i++)
+	{
+		canvasContext.fillText(this.lines[i], x, y);
+		y += (fontSize + 3);
+	}
+	console.log(this.lines);
+}
+
+	//AddText
+cText.prototype.AddText = function(newChar) {
+		var numLines = this.lines.length;
+		var lastLine = this.lines[numLines - 1];
+		var testLine = lastLine + newChar;
+		console.log(testLine);
+		var lineWidth = g_Canvas.getContext("2d").measureText(testLine).width;
+		if (lineWidth > this.width)
+		{
+			console.log("Char is over limit");
+			this.lines.push(newChar);
+		}
+		else
+		{
+			this.lines[numLines -1] = testLine;
+		}
+		OnCanvasChange();
+}
+
+cText.prototype.backspace = function() {
+	var numLines = this.lines.length;
+	var lastLine = this.lines[numLines - 1];
+	if (lastLine.length > 0)
+	{
+		this.lines[numLines - 1] = lastLine.substr(0, lastLine.length - 1);
+	}
+	else
+	{
+		this.lines.pop();
+		lastLine = this.lines[numLines - 2];
+		this.lines[numLines - 2] = lastLine.substr(0, lastLine.length - 1);
 	}
 }
 
@@ -253,17 +286,27 @@ function HandleKeyPress(e)
 	}
 	if (g_Typeing)
 	{
-		var curText = (g_TempDrawObj != null) ? g_TempDrawObj.text : "";
+		if (!g_TempDrawObj)
+		{
+			g_TempDrawObj = new cText(g_DrawingStartPos, g_TextBox.y, g_TextBox.x, 40, "", g_CurrentColour);
+		}
 		if (charCode != 8)
 		{
-			curText += String.fromCharCode(charCode);
+			if (e.shiftKey)
+			{
+				g_TempDrawObj.AddText(String.fromCharCode(charCode));
+			}
+			else
+			{
+				g_TempDrawObj.AddText(String.fromCharCode(charCode).toLowerCase());
+			}
+			
 		}
 		else
 		{
-			var textLen = curText.length;
-			curText = curText.substr(0, textLen - 1);
+			g_TempDrawObj.backspace();
 		}
-		g_TempDrawObj = new cText(g_DrawingStartPos, g_TextBox.y, g_TextBox.x, 40, curText, g_CurrentColour);
+		
 		OnCanvasChange();
 	}
 }
