@@ -6,7 +6,9 @@ var g_DrawObjType = 0;
 var g_TempDrawObj = null;
 var g_Drawing;
 var g_DrawingStartPos;
+var g_TextBox;
 var g_CurrentColour;
+var g_FontStyle;
 
 //Canvas Object Classes
 //Circle Class
@@ -52,17 +54,21 @@ cBox.prototype = {
 }
 
 //Text Class
-cText = function(pos, style, text, colour) {
+cText = function(pos, height, width, size, text, colour) {
 	this.position = pos;
-	this.fontStyle = style;
+	this.height = height;
+	this.width = width;
+	this.fontSize = size;
 	this.text = text;
 	this.colour = colour;
 }
 cText.prototype ={
 	//Draw
 	Draw: function(canvasContext) {
-		canvasContext.font = this.fontStyle;
-		canvasContext.fillText(this.text, this.position.x, this.position.y)
+		var letters = this.text.substr('');
+		console.log(letters);
+		canvasContext.font = "" + fontSize + "pt " + g_FontStyle;
+		canvasContext.fillText(this.text, this.position.x, this.position.y + this.fontSize);
 	}
 }
 
@@ -74,9 +80,11 @@ function initCanvasTest() {
 	g_Canvas.addEventListener('mouseup', OnMouseUp, false);
 	g_ImageObj = null;
 	g_Drawing = false;
-	g_ScreenShotLocation = "D:\\test.Jpg";
+	g_Typeing = false;
+	g_ScreenShotLocation = "D:\\CanvasTesting\\test.Jpg";
 	g_CanvasObjects.length = 0;
 	g_CurrentColour = document.getElementById("colourPicker").value;
+	g_FontStyle = "Calibri";
 	console.log("Hello World!")
 }
 
@@ -107,6 +115,12 @@ function OnCanvasChange()
 	{
 		g_TempDrawObj.Draw(ctx);
 	}
+}
+
+function CommitTempObject()
+{
+	g_CanvasObjects.push($.extend(true, {}, g_TempDrawObj));
+	g_TempDrawObj = null;
 }
 
 function ChangeColour(newColour)
@@ -148,7 +162,7 @@ function GetDistance(mousePos1, mousePos2)
 
 function GetResultant(mousePos1, mousePos2)
 {
-	return{
+	return {
 		x: mousePos2.x - mousePos1.x,
 		y: mousePos2.y - mousePos1.y
 	};
@@ -157,18 +171,14 @@ function GetResultant(mousePos1, mousePos2)
 function OnMouseDown(event) {
 	if(g_ImageObj != null) {
 		console.log("Mouse Down!")
-		if (g_DrawObjType == 2)
+		if (g_Typeing)
 		{
-			g_Typeing = true;
-			g_DrawingStartPos = GetMousePos(event);
-			OnCanvasChange();
+			CommitTempObject();
+			g_Typeing = false;
 		}
-		else
-		{
-			g_Drawing = true;
-			g_DrawingStartPos = GetMousePos(event);
-			OnCanvasChange();
-		}
+		g_Drawing = true;
+		g_DrawingStartPos = GetMousePos(event);
+		OnCanvasChange();
 	}
 }
 
@@ -189,6 +199,10 @@ function OnMouseMove(event)
 					var resultant = GetResultant(g_DrawingStartPos, curMousePos);
 					g_TempDrawObj = new cBox(g_DrawingStartPos, resultant.y, resultant.x, 4, g_CurrentColour);
 					break;
+				case 2: //TextBox
+					var resultant = GetResultant(g_DrawingStartPos, curMousePos);
+					g_TempDrawObj = new cBox(g_DrawingStartPos, resultant.y, resultant.x, 2, g_CurrentColour);
+					break;
 			}
 			OnCanvasChange();
 		}
@@ -197,12 +211,31 @@ function OnMouseMove(event)
 
 function OnMouseUp(event)
 {
-	g_Drawing = false;
 	if (g_ImageObj != null) {
 		console.log("Mouse Up!")
 		if (g_Drawing) {
-			g_CanvasObjects.push($.extend(true, {}, g_TempDrawObj));
-			g_TempDrawObj = null;
+			if (g_DrawObjType != 2)
+			{
+				CommitTempObject();
+				g_Drawing = false;	
+			}
+			else
+			{
+				if (g_TempDrawObj != null)
+				{
+					g_TextBox = {
+						x: (g_TempDrawObj.width == null) ? 0 : g_TempDrawObj.width,
+						y: (g_TempDrawObj.height== null) ? 0 : g_TempDrawObj.height
+					};
+				}
+				else 
+				{
+					g_TextBox = GetMousePos(event);
+				}
+				g_Typeing = true;
+				g_Drawing = false;
+				g_TempDrawObj = cText(g_DrawingStartPos, g_TextBox.y, g_TextBox.x, 40, "", g_CurrentColour);
+			}
 		}
 		OnCanvasChange();
 	}
@@ -211,33 +244,26 @@ function OnMouseUp(event)
 function HandleKeyPress(e)
 {
 	var charCode = (typeof e.which == "number") ? e.which : e.keycode;
-	if (charCode == 26)
+	console.log(charCode);
+	if (charCode == 90)
 	{
+		g_TempDrawObj = null;
+		g_Typeing = false;
 		Undo();
 	}
 	if (g_Typeing)
 	{
-		if (charCode == 13)
-		{
-			g_CanvasObjects.push($.extend(true, {}, g_TempDrawObj));
-			g_TempDrawObj = null;
-			g_Typeing = false;
-		}
-		var curText = "";
-		if (g_TempDrawObj != null)
-		{
-			curText = g_TempDrawObj.text;
-		}
+		var curText = (g_TempDrawObj != null) ? g_TempDrawObj.text : "";
 		if (charCode != 8)
 		{
 			curText += String.fromCharCode(charCode);
 		}
 		else
 		{
-			curText
+			var textLen = curText.length;
+			curText = curText.substr(0, textLen - 1);
 		}
-		
-		g_TempDrawObj = new cText(g_DrawingStartPos, '40pt Calibri', curText, g_CurrentColour);
+		g_TempDrawObj = new cText(g_DrawingStartPos, g_TextBox.y, g_TextBox.x, 40, curText, g_CurrentColour);
 		OnCanvasChange();
 	}
 }
