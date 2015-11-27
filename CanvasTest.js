@@ -156,13 +156,6 @@ ToolsOptions = function (tool, uiPath) {
     this.uiPath = uiPath;
     this.tool = tool;
     $.extend(true, this, tool.getConfigurableOptions());
-    $.ajax({
-        context: this,
-        dataType: "html",
-        url: uiPath,
-        success: this.bindToUI,
-        error: this.throwError
-    })
 }
 
 ToolsOptions.prototype.bindToUI = function (html, status, xhr) {
