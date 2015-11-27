@@ -9,6 +9,7 @@ var g_DrawingStartPos;
 var g_TextBox;
 var g_CurrentColour;
 var g_FontStyle;
+var g_ToolOptions;
 
 //Canvas Object Classes
 //Circle Class
@@ -23,11 +24,26 @@ cCircle.prototype.Draw = function(canvasContext) {
 	canvasContext.beginPath();
 	canvasContext.arc(	this.position.x, this.position.y,
 						this.radius, 0, 2 * Math.PI,
-						false);
+		   				false);
 	canvasContext.lineWidth = this.brushWidth;
 	canvasContext.strokeStyle = this.colour;
 	canvasContext.stroke();
 	canvasContext.closePath();
+}
+
+cCircle.prototype.isValid = function () {
+    if (this.radius > 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+cCircle.prototype.getConfigurableOptions = function(){
+    return {
+        lineWidth: 2,
+        colour: g_CurrentColour
+    }
 }
 
 //Box Class
@@ -46,10 +62,18 @@ cBox.prototype.Draw = function(canvasContext) {
 	canvasContext.strokeStyle = this.colour;
 	canvasContext.stroke();
 	canvasContext.closePath();
-}	
+}
+
+cBox.prototype.isValid = function () {
+    if (this.width + this.height > 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
 
 //Text Class
-cText = function(pos, height, width, size, text, colour) {
+cText = function(pos, height, width, size, text, colour, boundingRect) {
 	this.position = pos;
 	this.height = height;
 	this.width = width;
@@ -57,21 +81,43 @@ cText = function(pos, height, width, size, text, colour) {
 	this.text = text;
 	this.colour = colour;
 	this.lines = [''];
+	this._hasFocus = true;
+	this.boundingRect = boundingRect;
 }
 
-cText.prototype.Draw = function(canvasContext) {
-	canvasContext.font = "" + fontSize + "pt " + g_FontStyle;
+cText.prototype.Draw = function (canvasContext) {
+    if (this.hasFocus()) {
+        this.boundingRect.Draw(canvasContext);
+    }
+	canvasContext.font = "" + this.fontSize + "pt " + g_FontStyle;
 	var x = this.position.x;
 	var y = this.position.y + this.fontSize;
-	for (i = 0 ; i < this.lines.length ; i++)
+	for (var i = 0 ; i < this.lines.length ; i++)
 	{
 		canvasContext.fillText(this.lines[i], x, y);
-		y += (fontSize + 3);
+		y += (this.fontSize + 3);
 	}
 	console.log(this.lines);
 }
 
-	//AddText
+cText.prototype.isValid = function () {
+    if (this.lines.length >= 1 && this.lines[0].length >= 1) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+cText.prototype.hasFocus = function () {
+    return this._hasFocus;
+}
+
+cText.prototype.setFocus = function (bool) {
+    this._hasFocus = bool == true ? true : false;
+}
+
+
+//AddText
 cText.prototype.AddText = function(newChar) {
 		var numLines = this.lines.length;
 		var lastLine = this.lines[numLines - 1];
@@ -105,16 +151,45 @@ cText.prototype.backspace = function() {
 	}
 }
 
+//Options object for tools
+ToolsOptions = function (tool, uiPath) {
+    this.uiPath = uiPath;
+    this.tool = tool;
+    $.extend(true, this, tool.getConfigurableOptions());
+    $.ajax({
+        context: this,
+        dataType: "html",
+        url: uiPath,
+        success: this.bindToUI,
+        error: this.throwError
+    })
+}
+
+ToolsOptions.prototype.bindToUI = function (html, status, xhr) {
+    console.log(html);
+    this.tool = nulll;
+}
+
+ToolsOptions.prototype.throwError = function (xhr, status, error) {
+    console.log(status + " " + error);
+    this.tool = null;
+}
+
+
+
 //General Functions
 function initCanvasTest() {
+    var toolbar = $(".toolbar")[0];
+
+    toolbar.addEventListener('click', ChangeDrawType);
+
 	g_Canvas = document.getElementById("mCanvas");
 	g_Canvas.addEventListener('mousedown', OnMouseDown, false);
-	g_Canvas.addEventListener('mousemove', OnMouseMove, false);
-	g_Canvas.addEventListener('mouseup', OnMouseUp, false);
+	
 	g_ImageObj = null;
 	g_Drawing = false;
 	g_Typeing = false;
-	g_ScreenShotLocation = "D:\\CanvasTesting\\test.Jpg";
+	g_ScreenShotLocation = "test.jpg";
 	g_CanvasObjects.length = 0;
 	g_CurrentColour = document.getElementById("colourPicker").value;
 	g_FontStyle = "Calibri";
@@ -141,7 +216,7 @@ function OnCanvasChange()
 {
 	var ctx = g_Canvas.getContext("2d");
 	ctx.drawImage(g_ImageObj, 0, 0);
-	for (i = 0 ; i < g_CanvasObjects.length ; i++) {
+	for (var i = 0 ; i < g_CanvasObjects.length ; i++) {
 		g_CanvasObjects[i].Draw(ctx);
 	}
 	if (g_TempDrawObj != null)
@@ -150,10 +225,17 @@ function OnCanvasChange()
 	}
 }
 
-function CommitTempObject()
+function CommitTempObject(tempObject)
 {
-	g_CanvasObjects.push($.extend(true, {}, g_TempDrawObj));
-	g_TempDrawObj = null;
+    if (tempObject != null) {
+        if (tempObject.isValid()) {
+            g_CanvasObjects.push($.extend(true, {}, g_TempDrawObj));
+            g_TempDrawObj = null;
+        }
+        else {
+            console.log("Object isn't valid so isn't being added to the CanvasObject stack.")
+        }
+    }
 }
 
 function ChangeColour(newColour)
@@ -165,13 +247,16 @@ function ChangeColour(newColour)
 	}
 }
 
-function ChangeDrawType(ID)
+function ChangeDrawType(event)
 {
-	if (ID == "CircleBtn")
-		{ g_DrawObjType = 0; }
-	if (ID == "RectBtn")
+    if (event.target.id == "CircleBtn")
+    {
+        g_ToolOptions = new ToolsOptions(new cCircle(),'ToolOptionsCircle.html')
+        g_DrawObjType = 0;
+    }
+	if (event.target.id == "RectBtn")
 		{ g_DrawObjType = 1; }
-	if (ID == "TextBtn")
+    if (event.target.id == "TextBtn")
 		{ g_DrawObjType = 2; }
 }
 
@@ -206,13 +291,32 @@ function OnMouseDown(event) {
 		console.log("Mouse Down!")
 		if (g_Typeing)
 		{
-			CommitTempObject();
+		    g_TempDrawObj.setFocus(false);
+			CommitTempObject(g_TempDrawObj);
 			g_Typeing = false;
 		}
-		g_Drawing = true;
-		g_DrawingStartPos = GetMousePos(event);
+        g_Drawing = true;
+        var curMousePos = GetMousePos(event);
+        g_DrawingStartPos = GetMousePos(event);
+        switch (g_DrawObjType) {
+            case 0: //Circle
+                var dist = GetDistance(g_DrawingStartPos, curMousePos);
+                g_TempDrawObj = new cCircle(g_DrawingStartPos, dist, 4, g_CurrentColour);
+                break;
+            case 1: //Box
+                var resultant = GetResultant(g_DrawingStartPos, curMousePos);
+                g_TempDrawObj = new cBox(g_DrawingStartPos, resultant.y, resultant.x, 4, g_CurrentColour);
+                break;
+            case 2: //TextBox
+                var resultant = GetResultant(g_DrawingStartPos, curMousePos);
+                g_TempDrawObj = new cBox(g_DrawingStartPos, resultant.y, resultant.x, 2, g_CurrentColour);
+                break;
+        }
 		OnCanvasChange();
 	}
+	g_Canvas.removeEventListener('mousedown', OnMouseDown, false);
+	g_Canvas.addEventListener('mousemove', OnMouseMove, false);
+	g_Canvas.addEventListener('mouseup', OnMouseUp, false);
 }
 
 function OnMouseMove(event)
@@ -226,7 +330,7 @@ function OnMouseMove(event)
 			switch(g_DrawObjType) {
 				case 0: //Circle
 					var dist = GetDistance(g_DrawingStartPos, curMousePos);
-					g_TempDrawObj = new cCircle(g_DrawingStartPos, dist, 4, g_CurrentColour);
+					g_TempDrawObj = new cCircle(g_DrawingStartPos, dist, g_ToolOptions.lineWidth, g_ToolOptions.colour);
 					break;
 				case 1: //Box
 					var resultant = GetResultant(g_DrawingStartPos, curMousePos);
@@ -249,7 +353,7 @@ function OnMouseUp(event)
 		if (g_Drawing) {
 			if (g_DrawObjType != 2)
 			{
-				CommitTempObject();
+				CommitTempObject(g_TempDrawObj);
 				g_Drawing = false;	
 			}
 			else
@@ -267,11 +371,16 @@ function OnMouseUp(event)
 				}
 				g_Typeing = true;
 				g_Drawing = false;
-				g_TempDrawObj = cText(g_DrawingStartPos, g_TextBox.y, g_TextBox.x, 40, "", g_CurrentColour);
+				var boundingRect = g_TempDrawObj;
+				g_TempDrawObj = new cText(g_DrawingStartPos, g_TextBox.y, g_TextBox.x, 40, "", g_CurrentColour, boundingRect);
+				g_TempDrawObj.setFocus(true);
 			}
 		}
 		OnCanvasChange();
 	}
+	g_Canvas.removeEventListener('mousemove', OnMouseMove, false);
+	g_Canvas.removeEventListener('mouseup', OnMouseUp, false);
+	g_Canvas.addEventListener('mousedown', OnMouseDown, false);
 }
 
 function HandleKeyPress(e)

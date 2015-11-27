@@ -1,0 +1,15 @@
+﻿body
+{
+}
+
+.toolbar {
+    background-color: #395565;
+}
+
+.toolOptions__list {
+    display: inline;
+}
+
+.toolOptions__item__input {
+    width: 70px;
+}

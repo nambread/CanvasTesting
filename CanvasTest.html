@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-
+        <link href="Main.css" rel="stylesheet" type="text/css" />
 		<script type="text/javascript" src="jquery-1.11.1.js"></script>
 		<script type="text/javascript" src="CanvasTest.js"></script>		
 		<title>Canvas Testing</title>
@@ -19,16 +19,20 @@
 	</head>
 	<body>
 		<h1>LolCanvasTest</h1>
-		<div>
+		<div class="toolbar">
 			<button id="GetScreenshot" onclick="GetScreenshot()">GetScreenshot</button>
 			<button id="Undo" onclick="Undo()">Undo</button>
-			<button id="CircleBtn" onclick="ChangeDrawType(this.id)">Circle</button>
-			<button id="RectBtn" onclick="ChangeDrawType(this.id)">Rectangle</button>
-			<button id="TextBtn" onclick="ChangeDrawType(this.id)">Text</button>
+			<button id="CircleBtn">Circle</button>
+			<button id="RectBtn">Rectangle</button>
+			<button id="TextBtn">Text</button>
 		</div>
+        <!--will be taken out once tool options are working.-->
+        <input id="colourPicker" value="#FFFFFF" class="toolOptions__item__input" onchange="ChangeColour(this.value)" />
+        <div class="toolOptions">
+
+        </div>
 		<div>
-			<input id="colourPicker" value="#FFFFFF" style="width:70px" onchange="ChangeColour(this.value)">
-		</input>
+			
 		</div>
 		<canvas id="mCanvas" width="800" height ="800"></canvas>
 	</body>
